@@ -399,8 +399,8 @@ if files:
                         continue
                     fixed1 = validate_and_fix_schema(raw1)
 
-                    if bucket: 
-                    try:
+                    if bucket:
+                        try:
                       
                         timestamp = time.strftime("%Y%m%d_%H%M%S")
                         safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '_', item["name"])
@@ -470,6 +470,7 @@ if files:
                 } for r in mem]), use_container_width=True)
 
 # ===== end of file =====
+
 
 
 
