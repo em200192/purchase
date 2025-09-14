@@ -12,8 +12,6 @@ from google.cloud import storage
 from google.oauth2 import service_account
 import pandas as pd
 
-
-
 st.set_page_config(layout="wide", page_title="🧾 Invoice Extractor – Vendor Memory")
 
 # ---------- dotenv ----------
@@ -27,7 +25,6 @@ except Exception:
 ARABIC_INDIC = str.maketrans("٠١٢٣٤٥٦٧٨٩٫٬", "0123456789..")
 CAPACITY_TOKENS = re.compile(r"(?i)\b(?:ml|ltrs?|ltr|gms?|gm|grams?|جم|غ|مل|لتر|كجم|kg|كيلو)\b")
 MEMORY_PATH = "vendor_corrections.jsonl"
-
 
 @st.cache_resource
 def get_gcs_bucket(bucket_name):
@@ -47,7 +44,8 @@ def normalize_number(val: Any) -> Optional[float]:
         return None
     if isinstance(val, (int, float)):
         return float(val)
-    s = str(val).stهrip().translate(ARABIC_INDIC)
+    # CORRECTED LINE: "stهrip()" changed to "strip()"
+    s = str(val).strip().translate(ARABIC_INDIC)
     s = s.replace("\u00A0", " ")
     s = re.sub(r"[\s\$£€¥ر.سج.د]*", "", s)
     s = s.replace(",", "")
@@ -56,7 +54,6 @@ def normalize_number(val: Any) -> Optional[float]:
         return float(s)
     except Exception:
         return None
-
 
 def coerce_nulls(x: Any) -> Any:
     if isinstance(x, dict):
@@ -67,7 +64,6 @@ def coerce_nulls(x: Any) -> Any:
         return None
     return x
 
-
 def normalize_item_code(code: Optional[str]) -> Optional[str]:
     if not code:
         return code
@@ -77,7 +73,6 @@ def normalize_item_code(code: Optional[str]) -> Optional[str]:
     if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9\- ]*", s):
         return s or None
     return s or None
-
 
 def as_float_if_numeric_str(val: Any) -> Optional[float]:
     if val is None:
@@ -119,26 +114,26 @@ def validate_and_fix_schema(data: dict) -> dict:
     fixed_items: List[Dict[str, Any]] = []
     for item in items:
         item = item or {}
-        code         = item.get("ITM_CODE")           or item.get("رقم_الصنف")
-        name_ar      = item.get("ITM_L_NM")           or item.get("اسم_الصنف")
-        name_en      = item.get("ITM_F_NM")           or item.get("اسم_الصنف_انجليزي")
-        unit         = item.get("ITM_UNT")            or item.get("الوحدة")
-        qty          = item.get("ITM_QTY")            or item.get("الكمية")
-        price        = item.get("ITM_PRICE")          or item.get("سعر_الوحدة")
-        total_before = item.get("TOTAL_BFR_TAX")      or item.get("الاجمالي_قبل_الضريبة")
-        disc         = item.get("ITM_DSCNT")          or item.get("الخصم")
-        total_after  = item.get("TOTAL_AFTR_TAX")     or item.get("الاجمالي_بعد_الضريبة")
+        code         = item.get("ITM_CODE")          or item.get("رقم_الصنف")
+        name_ar      = item.get("ITM_L_NM")          or item.get("اسم_الصنف")
+        name_en      = item.get("ITM_F_NM")          or item.get("اسم_الصنف_انجليزي")
+        unit         = item.get("ITM_UNT")           or item.get("الوحدة")
+        qty          = item.get("ITM_QTY")           or item.get("الكمية")
+        price        = item.get("ITM_PRICE")         or item.get("سعر_الوحدة")
+        total_before = item.get("TOTAL_BFR_TAX")     or item.get("الاجمالي_قبل_الضريبة")
+        disc         = item.get("ITM_DSCNT")         or item.get("الخصم")
+        total_after  = item.get("TOTAL_AFTR_TAX")    or item.get("الاجمالي_بعد_الضريبة")
 
         fixed = {
-            "ITM_CODE":        normalize_item_code(code),
-            "ITM_L_NM":        name_ar,
-            "ITM_F_NM":        name_en,
-            "ITM_UNT":         unit,
-            "ITM_QTY":         normalize_number(qty),
-            "ITM_PRICE":       normalize_number(price),
-            "TOTAL_BFR_TAX":   normalize_number(total_before),
-            "ITM_DSCNT":       normalize_number(disc) or 0.0,
-            "TOTAL_AFTR_TAX":  normalize_number(total_after),
+            "ITM_CODE":       normalize_item_code(code),
+            "ITM_L_NM":       name_ar,
+            "ITM_F_NM":       name_en,
+            "ITM_UNT":        unit,
+            "ITM_QTY":        normalize_number(qty),
+            "ITM_PRICE":      normalize_number(price),
+            "TOTAL_BFR_TAX":  normalize_number(total_before),
+            "ITM_DSCNT":      normalize_number(disc) or 0.0,
+            "TOTAL_AFTR_TAX": normalize_number(total_after),
         }
 
         # Arithmetic swap-fix (detect if QTY and CODE were swapped)
@@ -167,15 +162,13 @@ def validate_and_fix_schema(data: dict) -> dict:
         fixed_items.append(fixed)
 
     out = {
-        "VNDR_NM":   vndr,
-        "CSTMR_NM":  cstm,
-        "DOC_NO":    doc,
+        "VNDR_NM":    vndr,
+        "CSTMR_NM":   cstm,
+        "DOC_NO":     doc,
         "DOC_NO_TAX": doct,
-        "ITEMS":     fixed_items,
+        "ITEMS":      fixed_items,
     }
     return coerce_nulls(out)
-
-
 
 # ---------- lightweight vendor memory ----------
 
@@ -188,7 +181,6 @@ def load_memory() -> List[dict]:
     except Exception:
         return []
 
-
 def save_memory(record: dict) -> None:
     try:
         with open(MEMORY_PATH, "a", encoding="utf-8") as f:
@@ -196,12 +188,10 @@ def save_memory(record: dict) -> None:
     except Exception:
         pass
 
-
 def get_vendor_examples(vendor: str, max_n: int = 3) -> List[dict]:
     mem = load_memory()
     examples = [r for r in mem if (r.get("اسم_المورد") == vendor or r.get("VNDR_NM") == vendor)]
     return examples[:max_n]
-
 
 def build_vendor_hint(vendor: str) -> str:
     ex = get_vendor_examples(vendor)
@@ -219,7 +209,6 @@ def build_vendor_hint(vendor: str) -> str:
     lines.append("- Never use size tokens (e.g., 230ML, 160 Gms) as codes. If unit_price*qty mismatches but unit_price*code matches the line total, swap them.")
     return "\n".join(lines)
 
-
 # ---------- Gemini ----------
 
 def get_api_key() -> Optional[str]:
@@ -234,7 +223,6 @@ def get_model(model_name: str = "gemini-1.5-flash-latest", enforce_json: bool = 
     generation_config = {"response_mime_type": "application/json"} if enforce_json else {}
     return genai.GenerativeModel(model_name=model_name, generation_config=generation_config)
 
-
 def image_to_jpeg_bytes(img: Image.Image, max_side: int = 2400, quality: int = 92) -> bytes:
     try:
         img = img.convert("RGB")
@@ -247,7 +235,6 @@ def image_to_jpeg_bytes(img: Image.Image, max_side: int = 2400, quality: int = 9
     buf = BytesIO()
     img.save(buf, format="JPEG", optimize=True, quality=quality)
     return buf.getvalue()
-
 
 def call_gemini_api(image_bytes: bytes, prompt: str, model_name: str) -> tuple[Optional[dict], Optional[str]]:
     if not image_bytes:
@@ -305,7 +292,6 @@ def call_gemini_api(image_bytes: bytes, prompt: str, model_name: str) -> tuple[O
                 return None, f"خطأ: {e}"
     return None, last_err or "فشل غير معروف"
 
-
 USER_PROMPT = r"""
 **CRITICAL TASK: Parse the invoice image and return ONLY a valid JSON (UTF-8) matching EXACTLY this schema and keys.**
 
@@ -337,14 +323,9 @@ STRICT RULES:
 Return ONLY the JSON object, nothing else.
 """
 
-
-
 # ---------- UI ----------
-
-SAVE_FOLDER = "Models"
 with st.sidebar:
     api_key = os.getenv("GEMINI_API_KEY")
-
     use_memory = st.checkbox("🧠 استخدام ذاكرة الموردين عند الإعادة", value=True)
 
 st.title("🧾مستخرج بيانات الفواتير ")
@@ -382,7 +363,6 @@ if files:
     with col2:
         st.subheader("الاستخراج")
         if st.button("🚀 استخراج", type="primary", disabled=not api_key):
-            os.makedirs(SAVE_FOLDER, exist_ok=True)
             GCS_BUCKET_NAME = "purchase_image_cloud"
             bucket = get_gcs_bucket(GCS_BUCKET_NAME)
             total = len(previews)
@@ -401,29 +381,25 @@ if files:
 
                     if bucket:
                         try:
-                      
-                        timestamp = time.strftime("%Y%m%d_%H%M%S")
-                        safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '_', item["name"])
-                        base_name = f"{timestamp}_{i}_{safe_filename}"
+                            timestamp = time.strftime("%Y%m%d_%H%M%S")
+                            safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '_', item["name"])
+                            base_name = f"{timestamp}_{i}_{safe_filename}"
+                            
+                            image_blob_name = f"invoices/{base_name}.jpg"
+                            json_blob_name = f"results/{base_name}.json"
+                            
+                            image_blob = bucket.blob(image_blob_name)
+                            image_blob.upload_from_string(img_bytes, content_type="image/jpeg")
+                            
+                            json_blob = bucket.blob(json_blob_name)
+                            json_data = json.dumps(fixed1, ensure_ascii=False, indent=4)
+                            json_blob.upload_from_string(json_data, content_type="application/json")
+                            
+                            st.toast(f"✅ Saved to cloud storage.")
 
-                       
-                        image_blob_name = f"invoices/{base_name}.jpg"
-                        json_blob_name = f"results/{base_name}.json"
-
-                       
-                        image_blob = bucket.blob(image_blob_name)
-                        image_blob.upload_from_string(img_bytes, content_type="image/jpeg")
-
-                        json_blob = bucket.blob(json_blob_name)
-                        json_data = json.dumps(fixed1, ensure_ascii=False, indent=4)
-                        json_blob.upload_from_string(json_data, content_type="application/json")
-
-                        st.toast(f"✅ Saved to cloud storage.")
-
-                    except Exception as e:
-                        st.warning(f"⚠️ Could not upload to cloud storage: {e}")
-                # --- END OF NEW CLOUD UPLOAD LOGIC ---
-
+                        except Exception as e:
+                            st.warning(f"⚠️ Could not upload to cloud storage: {e}")
+                    
                     # محرر قابل للتعديل
                     vendor = fixed1.get("اسم_المورد") or ""
                     st.markdown(f"**المورد:** {vendor}")
@@ -447,7 +423,6 @@ if files:
                                 fixed2 = validate_and_fix_schema(raw2)
                                 st.markdown("**نتيجة بعد استخدام الذاكرة:**")
                                 st.json(fixed2)
-                                # اقتراح: يمكن مقارنة الفروقات هنا إذا رغبت
                             else:
                                 st.warning(f"فشل إعادة الاستخراج: {err2}")
 
@@ -468,9 +443,3 @@ if files:
                     "رقم الفاتورة": r.get("رقم_الفاتورة") or r.get("DOC_NO"),
                     "عدد الأصناف": len(r.get("الأصناف") or r.get("ITEMS") or [])
                 } for r in mem]), use_container_width=True)
-
-# ===== end of file =====
-
-
-
-
