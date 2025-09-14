@@ -8,6 +8,8 @@ import time
 import os
 import re
 from typing import Any, Dict, List, Optional
+from google.cloud import storage
+from google.oauth2 import service_account
 import pandas as pd
 
 
@@ -27,12 +29,25 @@ CAPACITY_TOKENS = re.compile(r"(?i)\b(?:ml|ltrs?|ltr|gms?|gm|grams?|جم|غ|مل
 MEMORY_PATH = "vendor_corrections.jsonl"
 
 
+@st.cache_resource
+def get_gcs_bucket(bucket_name):
+    """Connects to GCS and returns the bucket object."""
+    try:
+        creds = service_account.Credentials.from_service_account_info(
+            st.secrets["gcs_credentials"]
+        )
+        client = storage.Client(credentials=creds)
+        return client.get_bucket(bucket_name)
+    except Exception as e:
+        st.error(f"Failed to connect to Google Cloud Storage: {e}")
+        return None
+
 def normalize_number(val: Any) -> Optional[float]:
     if val is None:
         return None
     if isinstance(val, (int, float)):
         return float(val)
-    s = str(val).strip().translate(ARABIC_INDIC)
+    s = str(val).stهrip().translate(ARABIC_INDIC)
     s = s.replace("\u00A0", " ")
     s = re.sub(r"[\s\$£€¥ر.سج.د]*", "", s)
     s = s.replace(",", "")
@@ -368,6 +383,8 @@ if files:
         st.subheader("الاستخراج")
         if st.button("🚀 استخراج", type="primary", disabled=not api_key):
             os.makedirs(SAVE_FOLDER, exist_ok=True)
+            GCS_BUCKET_NAME = "purchase_image_cloud"
+            bucket = get_gcs_bucket(GCS_BUCKET_NAME)
             total = len(previews)
             prog = st.progress(0, text=f"تحليل {total} صفحة…")
             for i, item in enumerate(previews, 1):
@@ -382,27 +399,31 @@ if files:
                         continue
                     fixed1 = validate_and_fix_schema(raw1)
 
+                    if bucket: 
                     try:
-                        # Create a unique, safe filename base
+                      
                         timestamp = time.strftime("%Y%m%d_%H%M%S")
                         safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '_', item["name"])
                         base_name = f"{timestamp}_{i}_{safe_filename}"
 
-                        # 1. Save the invoice image
-                        image_path = os.path.join(SAVE_FOLDER, f"{base_name}.jpg")
-                        with open(image_path, "wb") as f:
-                            f.write(img_bytes)
+                       
+                        image_blob_name = f"invoices/{base_name}.jpg"
+                        json_blob_name = f"results/{base_name}.json"
 
-                        # 2. Save the extracted JSON result
-                        json_path = os.path.join(SAVE_FOLDER, f"{base_name}.json")
-                        with open(json_path, "w", encoding="utf-8") as f:
-                            json.dump(fixed1, f, ensure_ascii=False, indent=4)
-                        
-                        # Give user feedback without cluttering the UI too much
-                        st.toast(f"✅ Saved to '{SAVE_FOLDER}/{base_name}.json'")
+                       
+                        image_blob = bucket.blob(image_blob_name)
+                        image_blob.upload_from_string(img_bytes, content_type="image/jpeg")
+
+                        json_blob = bucket.blob(json_blob_name)
+                        json_data = json.dumps(fixed1, ensure_ascii=False, indent=4)
+                        json_blob.upload_from_string(json_data, content_type="application/json")
+
+                        st.toast(f"✅ Saved to cloud storage.")
 
                     except Exception as e:
-                        st.warning(f"⚠️ Could not save file to '{SAVE_FOLDER}': {e}")
+                        st.warning(f"⚠️ Could not upload to cloud storage: {e}")
+                # --- END OF NEW CLOUD UPLOAD LOGIC ---
+
                     # محرر قابل للتعديل
                     vendor = fixed1.get("اسم_المورد") or ""
                     st.markdown(f"**المورد:** {vendor}")
@@ -449,5 +470,6 @@ if files:
                 } for r in mem]), use_container_width=True)
 
 # ===== end of file =====
+
 
 
