@@ -325,12 +325,14 @@ Return ONLY the JSON object, nothing else.
 
 
 # ---------- UI ----------
+
+SAVE_FOLDER = "Models"
 with st.sidebar:
     api_key = os.getenv("GEMINI_API_KEY")
 
     use_memory = st.checkbox("🧠 استخدام ذاكرة الموردين عند الإعادة", value=True)
 
-st.title("🧾مستخرج بيانات الفواتير – ")
+st.title("🧾مستخرج بيانات الفواتير ")
 st.markdown("---")
 
 # upload
@@ -365,6 +367,7 @@ if files:
     with col2:
         st.subheader("الاستخراج")
         if st.button("🚀 استخراج", type="primary", disabled=not api_key):
+            os.makedirs(SAVE_FOLDER, exist_ok=True)
             total = len(previews)
             prog = st.progress(0, text=f"تحليل {total} صفحة…")
             for i, item in enumerate(previews, 1):
@@ -379,6 +382,27 @@ if files:
                         continue
                     fixed1 = validate_and_fix_schema(raw1)
 
+                    try:
+                        # Create a unique, safe filename base
+                        timestamp = time.strftime("%Y%m%d_%H%M%S")
+                        safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '_', item["name"])
+                        base_name = f"{timestamp}_{i}_{safe_filename}"
+
+                        # 1. Save the invoice image
+                        image_path = os.path.join(SAVE_FOLDER, f"{base_name}.jpg")
+                        with open(image_path, "wb") as f:
+                            f.write(img_bytes)
+
+                        # 2. Save the extracted JSON result
+                        json_path = os.path.join(SAVE_FOLDER, f"{base_name}.json")
+                        with open(json_path, "w", encoding="utf-8") as f:
+                            json.dump(fixed1, f, ensure_ascii=False, indent=4)
+                        
+                        # Give user feedback without cluttering the UI too much
+                        st.toast(f"✅ Saved to '{SAVE_FOLDER}/{base_name}.json'")
+
+                    except Exception as e:
+                        st.warning(f"⚠️ Could not save file to '{SAVE_FOLDER}': {e}")
                     # محرر قابل للتعديل
                     vendor = fixed1.get("اسم_المورد") or ""
                     st.markdown(f"**المورد:** {vendor}")
@@ -425,4 +449,5 @@ if files:
                 } for r in mem]), use_container_width=True)
 
 # ===== end of file =====
+
 
