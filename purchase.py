@@ -10,14 +10,7 @@ import re
 from typing import Any, Dict, List, Optional
 import pandas as pd
 
-# ==========================================
-# 🧾 Invoice Extractor – Gemini 1.5 (dotenv, RTL, Editable + Vendor Memory)
-# - Uses ONLY dotenv env var GEMINI_API_KEY (no st.secrets)
-# - Arabic schema keys (compatible with your current data model)
-# - User can EDIT extracted lines; saves corrections to vendor_corrections.jsonl
-# - "Vendor Memory": re-run with few-shot guidance learned from past corrections
-# - Auto-detect/sanitize numbers; prevent size tokens as codes; basic swap-fix via memory
-# ==========================================
+
 
 st.set_page_config(layout="wide", page_title="🧾 Invoice Extractor – Vendor Memory")
 
@@ -337,7 +330,7 @@ with st.sidebar:
 
     use_memory = st.checkbox("🧠 استخدام ذاكرة الموردين عند الإعادة", value=True)
 
-st.title("🧾 مستخرج بيانات الفواتير – قابل للتعديل مع ذاكرة الموردين")
+st.title("🧾مستخرج بيانات الفواتير – ")
 st.markdown("---")
 
 # upload
@@ -432,3 +425,4 @@ if files:
                 } for r in mem]), use_container_width=True)
 
 # ===== end of file =====
+
