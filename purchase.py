@@ -363,7 +363,7 @@ if files:
     with col2:
         st.subheader("الاستخراج")
         if st.button("🚀 استخراج", type="primary", disabled=not api_key):
-            GCS_BUCKET_NAME = "purchase_image_cloud"
+            GCS_BUCKET_NAME = "invoice-processor-storage-123"
             bucket = get_gcs_bucket(GCS_BUCKET_NAME)
             total = len(previews)
             prog = st.progress(0, text=f"تحليل {total} صفحة…")
@@ -443,3 +443,4 @@ if files:
                     "رقم الفاتورة": r.get("رقم_الفاتورة") or r.get("DOC_NO"),
                     "عدد الأصناف": len(r.get("الأصناف") or r.get("ITEMS") or [])
                 } for r in mem]), use_container_width=True)
+
