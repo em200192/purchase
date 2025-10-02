@@ -215,7 +215,7 @@ def get_api_key() -> Optional[str]:
     return os.getenv("GEMINI_API_KEY")
 
 @st.cache_resource(show_spinner=False)
-def get_model(model_name: str = "gemini-1.5-flash-latest", enforce_json: bool = True):
+def get_model(model_name: str = "gemini-2.0-flash", enforce_json: bool = True):
     api_key = get_api_key()
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set in environment (.env)")
@@ -443,4 +443,5 @@ if files:
                     "رقم الفاتورة": r.get("رقم_الفاتورة") or r.get("DOC_NO"),
                     "عدد الأصناف": len(r.get("الأصناف") or r.get("ITEMS") or [])
                 } for r in mem]), use_container_width=True)
+
 
